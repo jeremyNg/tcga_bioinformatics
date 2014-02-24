@@ -1,4 +1,4 @@
-
+# READ in csv file with RNA seq data from L93 onwards! can skip the first few parts
 # CODE CHUNK 1: read in files as objects
 
 gen.manifest <- function(){
@@ -58,6 +58,7 @@ g.n <- get.gn() # there is a duplicate in SLC35E2; remove the second entry
 g.n <- g.n[-16273]
 rna.seq <- rna.seq[-16273,]
 rownames(rna.seq) <- g.n
+write.csv(rna.seq,"combinedRNAseq.csv")
 
 rm(g.n,get.gn,rna.seq.fp,rna.seq.manifest,read.rnaseq)
 
@@ -72,12 +73,35 @@ tgf.all <- unique(c(tgf.up,tgf.down)) # set of all genes identified in tgf beta 
 
 rna.seq.tgf <- rna.seq[rownames(rna.seq)%in%tgf.all,] # expression data for all genes involved in tgfbeta
 
-rna.seq.tgf.up <- rna.seq[rownames(rna.seq)%in%tgf.up,]
-rna.seq.tgf.down <- rna.seq[rownames(rna.seq)%in%tgf.down,]
+tgf.scale <- scale(rna.seq.tgf) # scales data using Z transform
+#tgf.cov <- apply(tgf.scale,1,function(x){y <-sd(x)/mean(x)})
+#tgf.mean <- apply(tgf.scale,1,mean)
 
-rm(tgf.up,tgf.down,tgf.all)
+#rna.seq.tgf.up <- rna.seq[rownames(rna.seq)%in%tgf.up,]
+#rna.seq.tgf.down <- rna.seq[rownames(rna.seq)%in%tgf.down,]
 
-tgf.dist <- dist(t(log2(rna.seq.tgf+1)),method = "maximum")
+#rm(tgf.up,tgf.down,tgf.all)
+
+# code chunk for hclustering
+
+# Perform bootstrapping o test structure
+#require(ClassDiscovery)
+#boot <- BootstrapClusterTest(log10(rna.seq.tgf+1),cutHclust,k=4,method="ward",metric="euclid",nTimes = 1000) # uses 1000 iterations to perform bootstrapping of SAMPLE clustering
+#image(boot,col=blueyellow(64)) # plots the counts
+#require(gplots)
+
+rna.seq <- read.csv("combinedRNAseq.csv")# calls in the saved RNAseq data from earlier
+rownames(rna.seq) <- rna.seq[,1]
+rna.seq <- rna.seq[,-1]
+tgf.up <- read.table("~/Downloads/tgf_up.txt",sep="\t")
+tgf.up <- tgf.up[-(1:2),]
+tgf.up <- as.vector(tgf.up)
+tgf.down <- read.table("~/Downloads/tgf_down.txt",sep="\t")
+tgf.down <- tgf.down[-(1:2),]
+tgf.down <- as.vector(tgf.down)
+tgf.all <- unique(c(tgf.up,tgf.down)) # set of all genes identified in tgf beta resp
+rna.seq.tgf <- rna.seq[rownames(rna.seq)%in%tgf.all,] # expression data for all gene
+tgf.dist <- dist(t(rna.seq.tgf),method = "euclidean")
 tgf.clust <- hclust(tgf.dist,method="ward")
 clust.assignments <- cutree(tgf.clust,k=4) # this will break them up into 2 clusters, when the maximum distance is used with ward clustering algorithm
 clust.col <- gsub("1","red",clust.assignments)
@@ -85,61 +109,65 @@ clust.col <- gsub("2","blue",clust.col)
 clust.col <- gsub("3","orange",clust.col)
 clust.col <- gsub("4","green",clust.col)
 
+# plot the heatmap
+#heatmap.2(as.matrix(log10(rna.seq.tgf+1)),trace = "none",hclustfun = function(x) hclust(x,method = "ward"),distfun = function(x) dist(x,method = "euclidean"),col=topo.colors(100),ColSideColors = clust.col) # plot heatmap for all the genes of interest in the TGFb response
 
-rna.seq.tgf.dif <- rna.seq.tgf[,which(clust.col%in%c("blue"))]
-rna.seq.tgf.other <- rna.seq.tgf[,-which(clust.assignments==2)]
+# code for calculating similarity index
+rna.seq.tgf1 <- rna.seq.tgf[,which(clust.col=="blue")]
+rna.seq.tgf2 <- rna.seq.tgf[,-c(which(clust.col=="blue"))]
+rna.seq.med1 <- apply(log10(rna.seq.tgf1+1),1,median) # summarize median for group 1
+rna.seq.med2 <- apply(log10(rna.seq.tgf2+1),1,median) # summarize median for other groups
+# ID the genes that are up regulated by TGFb
+ups <- which(rownames(rna.seq.tgf)%in%tgf.up)
+# ...and those down regulated by TGFb
+downs <- which(rownames(rna.seq.tgf)%in%tgf.down)
+# break them up, we will now have 4 lists
+#ups.1 <- rna.seq.med1[ups] # upregulated, grp 1
+#ups.2 <- rna.seq.med2[ups] # upregulated, grp 2
+#downs.1 <- rna.seq.med1[downs] # downregulated, grp 1
+#downs.2 <- rna.seq.med2[downs] # downregulated, grp 2
+# using a simple method to determine
+#score.grp1 <- length(which(ups.1>ups.2))+length(which(downs.1<downs.2))
+#score.grp2 <- length(which(ups.2>ups.1))+length(which(downs.2<downs.1))
 
-rna.seq.dif.med <- apply(rna.seq.tgf.dif,1,median)
-rna.seq.others.med <- apply(rna.seq.tgf.other,1,median)
-dif <- abs(rna.seq.dif.med-rna.seq.others.med)
+# to perform a boot strap test for the score ->
+# Question: Are the similarity scores really significantly different
+# logic -> choose n samples for each grp, then after that, select n number of points, then calculate the statistical significance with a paired t-test
 
-rna.seq.1 <- rna.seq.tgf[,-which(clust.assignments==1)]
-rna.seq.3 <- rna.seq.tgf[,-which(clust.assignments==3)]
-rna.seq.4 <- rna.seq.tgf[,-which(clust.assignments==4)]
-dif2 <- abs(rna.seq.dif.med-apply(rna.seq.1,1,median))
-dif3 <- abs(rna.seq.dif.med-apply(rna.seq.3,1,median))
-dif4 <- abs(rna.seq.dif.med-apply(rna.seq.4,1,median))
-plot(dif,type="l",ylab="Difference (medians)",xlab="Gene",main="Difference in median counts",ylim=c(0,15000))
-par(new=TRUE)
-plot(dif2,type="l",ylab="Difference (medians)",xlab="Gene",main="Difference in median counts",ylim=c(0,15000),col="red")
-par(new=TRUE)
-plot(dif3,type="l",ylab="Difference (medians)",xlab="Gene",main="Difference in median counts",ylim=c(0,15000),col="blue")
-par(new=TRUE)
-plot(dif4,type="l",ylab="Difference (medians)",xlab="Gene",main="Difference in median counts",ylim=c(0,15000),col="green")
-require(gplots)
-
-heatmap.2(as.matrix(log10(rna.seq.tgf+1)),ColSideColors=clust.col,trace = "none",hclustfun = function(x) hclust(x,method = "ward"),distfun = function(x) dist(x,method = "maximum")) # plot heatmap for all the genes of interest in the TGFb response
-coef.variation <- apply(rna.seq.tgf,1,function(x) sd(x)/mean(x)) #calculate a coefficient of variation for each gene
-rna.seq.tgf.high.coef <- rna.seq.tgf[rownames(rna.seq.tgf)%in%rownames(rna.seq.tgf)[which(coef.variation>mean(coef.variation))],]
-heatmap.2(as.matrix(log10(rna.seq.tgf.high.coef+1)),ColSideColors = clust.col,trace = "none",hclustfun = function(x) hclust(x,method = "ward"),distfun = function(x) dist(x,method = "maximum"),col=topo.colors(100)) # plot heatmap for all the genes of interest in the TGFb response
-
-heatmap.2(as.matrix(log10(rna.seq.tgf.dif+1)),trace = "none",hclustfun = function(x) hclust(x,method = "ward"),distfun = function(x) dist(x,method = "maximum"),col=topo.colors(100),ColSideColors = clust.cols) # plot heatmap for all the genes of interest in the TGFb response
-rm(rna.seq.z.std)
-rm(rna.seq.tgf.high.coef,coef.variation)
-rm(clust.assignments,tgf.clust,tgf.dist,genes)
-
-
-# to calculate NXN matrix
-compute.cor <- function(x){
-    results <- array(dim=c(ncol(x),ncol(x)))
-    colnames(results) <- colnames(x) # names by samples
-    rownames(results) <- colnames(results)
-    for (i in 1:ncol(x)){
-        for (j in 1:ncol(x)){
-            results[i,j] <- results[j,i] <- cor(x[,i],x[,j],method="pearson")
-            }
+bootstrapscores <- function(x,y,n.iter=10000){
+    # initialize the counters
+    #x is grp 1, y is grp 2
+    j <- 1
+    grp1.list <- grp2.list <- rep(NA,n.iter)
+    while (j<=n.iter){
+        # randomly select some genes
+        g.l <- sample(x=1:1000,size=372,replace=TRUE)
+        cat("iteration",j,"of", n.iter,"\n")
+        # to select the samples ##
+        # to build up the scores
+        sm.a <- x[g.l,]
+        #print(dim(sm.a))
+        sm.b <- y[g.l,]
+        #print(dim(sm.b))
+        # to calculate the medians
+        m.a <- apply(log10(sm.a+1),1,median)
+        m.b <- apply(log10(sm.b+1),1,median)
+        ups <- which(rownames(rna.seq.tgf)%in%tgf.up)
+# ...and those down regulated by TGFb
+        downs <- which(rownames(rna.seq.tgf)%in%tgf.down)
+        ups.1 <- m.a[ups] # upregulated, grp 1
+        ups.2 <- m.b[ups] # upregulated, grp 2
+        downs.1 <- m.a[downs] # downregulated, grp 1
+        downs.2 <- m.b[downs] # downregulated, grp 2
+        score.grp1 <- length(which(ups.1>ups.2))+length(which(downs.1<downs.2))
+        score.grp2 <- length(which(ups.2>ups.1))+length(which(downs.2<downs.1))
+        grp1.list[j] <- score.grp1
+        grp2.list[j] <- score.grp2
+        n.genes[j] <- n.
+        #cat(score.grp1,score.grp2,"\n")
+        j <- j+1 # increases the counter
         }
-    return(results)
+    res <- data.frame(Grp1=grp1.list,Grp2=grp2.list)
+    return(res)
     }
-cor.matrix <- compute.cor(rna.seq.tgf)
-cor.matrix.z <- apply(cor.matrix,1,function(x){z <- (x-mean(x))/sd(x)}) # to perform z-normalization of the correlation coefficients
-
-# are the correlation coefficients the same across all samples?
-require(reshape)
-require(ggplot2)
-
-cor.melt <- melt(cor.matrix)
-ggplot(cor.melt,aes(as.factor(X1),X2,group=X1))+geom_tile(aes(fill=value))+scale_fill_gradient(high="red",low="yellow")+ggtitle("Correlation of expression between samples")+xlab("Sample")+ylab("Sample")
-
-rm(cor.melt,cor.matrix,compute.cor)
-
+bootstraprun <- bootstrapscores(rna.seq.tgf1,rna.seq.tgf2,10000) # does 10000 iterations
