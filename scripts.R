@@ -89,45 +89,52 @@ heatmap.2(as.matrix(log10(rna.seq.tgf+1)),trace = "none",hclustfun = function(x)
 
 # Perform bootstrapping to test structure and robustness of clustering
 require(ClassDiscovery)
-boot <- BootstrapClusterTest(log10(rna.seq.tgf+1),cutHclust,k=4,method="ward",metric="euclid",nTimes = 1000) # uses 1000 iterations to perform bootstrapping of SAMPLE clustering
-image(boot,col=blueyellow(64)) # plots the counts
+boot <- BootstrapClusterTest(log10(rna.seq.tgf+1),cutHclust,k=4,method="ward",metric="euclid",nTimes = 1000,verbose = FALSE) # uses 1000 iterations to perform bootstrapping of SAMPLE clustering
+image(boot,col=blueyellow(64),dendrogram=tgf.clust,ColSideColors=clust.col,RowSideColors=clust.col) # plots the counts
 
 # to perform a boot strap test for the score::
-# score defined as-> if in grp 1 is higher/lower relative to their expected expression values then score as +1 else 0
-# Question: Are the similarity scores really significantly different
-# logic -> choose  n number of points, then calculate the statistical significance with a paired t-test; robustness of the scores
 
-# code for calculating similarity index
-rna.seq.tgf1 <- rna.seq.tgf[,which(clust.col=="blue")]
-rna.seq.tgf2 <- rna.seq.tgf[,-c(which(clust.col=="blue"))]
-
-bootstrapscores <- function(x,y,n.iter=10000){
-    # initialize the counters
-    #x is grp 1, y is grp 2
-    j <- 1
-    grp1.list <- grp2.list <- rep(NA,n.iter)
-    while (j<=n.iter){
-        # randomly select some genes
-        g.l <- sample(x=1:372,size=372,replace=TRUE)
-        cat("iteration",j,"of", n.iter,"\n")
-        sm.a <- x[g.l,] # grp 1 gene expression matrix with draw
-        sm.b <- y[g.l,] # grp 2 gene expression matrix with draw
-        m.a <- apply(log10(sm.a+1),1,median) # median group 1
-        m.b <- apply(log10(sm.b+1),1,median) # median group 2
-        ups <- which(rownames(rna.seq.tgf)%in%tgf.up)
-        downs <- which(rownames(rna.seq.tgf)%in%tgf.down)
-        ups.1 <- m.a[ups] # upregulated, grp 1
-        ups.2 <- m.b[ups] # upregulated, grp 2
-        downs.1 <- m.a[downs] # downregulated, grp 1
-        downs.2 <- m.b[downs] # downregulated, grp 2
-        score.grp1 <- length(which(ups.1>ups.2))+length(which(downs.1<downs.2))
-        score.grp2 <- length(which(ups.2>ups.1))+length(which(downs.2<downs.1))
-        grp1.list[j] <- score.grp1
-        grp2.list[j] <- score.grp2
-        #cat(score.grp1,score.grp2,"\n")
-        j <- j+1 # increases the counter j
-        }
-    res <- data.frame(Grp1=grp1.list,Grp2=grp2.list) # makes a data frame
-    return(res)
+bootstrapscores <- function(x,y,n.iters=1000){
+    # function to calculate score of suitability of grp 1 vs grp 2
+    # to guarantee reproducibility of results only #
+    set.seed(0)
+    seeds <- sample(1:100000,n.iters,replace=TRUE) # generates a list of random seeds
+    result.list <- rep(NA,n.iters)
+    for (i in 1:n.iters){
+        cat("iteration",i,"\n")
+    set.seed(seeds[i])
+    gl <- sample(1:372,372,replace=TRUE) # gets a list of genes by their rows
+    grp1.list <- x[gl,]
+    grp2.list <- y[gl,]
+    grp1.up <- x[rownames(grp1.list)%in%tgf.up,]
+    grp2.up <- y[rownames(grp2.list)%in%tgf.up,]
+    grp1.down <- x[rownames(grp1.list)%in%tgf.down,]
+    grp2.down <- y[rownames(grp2.list)%in%tgf.down,]
+    up.r <- rep(NA,nrow(grp1.up))
+    down.r <- rep(NA,nrow(grp1.down))
+    for (j in 1:nrow(grp1.up)){
+        z <- wilcox.test(as.numeric(grp1.up[j,]),as.numeric(grp2.up[j,]),alternative = "greater")
+        up.r[j] <- z$p.value
     }
-bootstraprun <- bootstrapscores(rna.seq.tgf1,rna.seq.tgf2,10000) # does 10000 iterations
+    for (k in 1:nrow(grp1.down)){
+        z <- wilcox.test(as.numeric(grp1.down[k,]),as.numeric(grp2.down[k,]),alternative = "less")
+        down.r[k] <- z$p.value
+    }
+    b <- sum(up.r,down.r)
+    result.list[i] <- b
+    } # closes the for loop over the iterations
+   return(result.list/372)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
