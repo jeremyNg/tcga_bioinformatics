@@ -92,7 +92,13 @@ require(ClassDiscovery)
 boot <- BootstrapClusterTest(log10(rna.seq.tgf+1),cutHclust,k=4,method="ward",metric="euclid",nTimes = 1000,verbose = FALSE) # uses 1000 iterations to perform bootstrapping of SAMPLE clustering
 image(boot,col=blueyellow(64),dendrogram=tgf.clust,ColSideColors=clust.col,RowSideColors=clust.col) # plots the counts
 
-# to perform a boot strap test for the score::
+
+grp1 <- rna.seq.tgf[,which(clust.col=="blue")] # blue cluster
+grp2 <- rna.seq.tgf[,which(clust.col!="blue")] # other clusters
+
+# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
+# the conflating of the other group might be a problem if we cannot show that the blue cluster is the better cluster
+# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
 
 bootstrapscores <- function(x,y,n.iters=1000){
     # function to calculate score of suitability of grp 1 vs grp 2
@@ -101,8 +107,8 @@ bootstrapscores <- function(x,y,n.iters=1000){
     seeds <- sample(1:100000,n.iters,replace=TRUE) # generates a list of random seeds
     result.list <- rep(NA,n.iters)
     for (i in 1:n.iters){
-        cat("iteration",i,"\n")
     set.seed(seeds[i])
+     cat("iteration",i," with seed",seeds[i],"\n")
     gl <- sample(1:372,372,replace=TRUE) # gets a list of genes by their rows
     grp1.list <- x[gl,]
     grp2.list <- y[gl,]
@@ -125,12 +131,19 @@ bootstrapscores <- function(x,y,n.iters=1000){
     } # closes the for loop over the iterations
    return(result.list/372)
 }
+bluescore <- bootstrapscores(grp1,grp2,1000) # bootstrap for the blue cluster
+# both runs will have the same set of seeds, which means both will have the same set of genes compared throughout the simulations - fair comparison but not sure how robust though #
+miscscore <- bootstrapscores(grp2,grp1,1000) # bootstrap for other clusters
 
+# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
+# high p-value = high likelihood of similarity between grp 1 and 2, mean less significant difference between the expression of the 2 groups -
+#we want to maximize the significance of difference in the a priori expected direction, hence want to minimize the sum of all the p-values
+# for instuitive interpretation take the complement of the p-value (1-p)
+# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
 
-
-
-
-
+bluecom <- 1-bluescore # to calculate the reverse for interpretability
+miscom <- 1-miscscore
+boxplot(data.frame(Blue=bluecom,Others=miscom)) # boxplot to visualize scores
 
 
 
