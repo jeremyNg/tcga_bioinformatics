@@ -63,6 +63,13 @@ rm(g.n,get.gn,rna.seq.fp,rna.seq.manifest,read.rnaseq) # removes the unwanted wo
 
 # CODE CHUNK 3: Using gene set information for clustering
 
+# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
+# Comparative method to get clsutering
+# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
+# there is no need for us to have an absolutely healthy control; actually since we are interested in identifying the most responsive systems, we can just simply find the samples which show the largest change in the TGFB system
+# rescale samples using z transform so that the mean of each sample is 0 and SD is 1
+# calculate the mean for each and every gene, then after that, calculate a logFC
+
 ####### Code chunk below starts from a csv file that was exported earlier for the entire gene expression array
 rna.seq <- read.csv("combinedRNAseq.csv")# calls in the saved RNAseq data from earlier
 rownames(rna.seq) <- rna.seq[,1]
@@ -74,80 +81,37 @@ tgf.down <- read.table("~/Downloads/tgf_down.txt",sep="\t")
 tgf.down <- tgf.down[-(1:2),]
 tgf.down <- as.vector(tgf.down)
 tgf.all <- unique(c(tgf.up,tgf.down)) # set of all genes identified in tgf beta resp
-rna.seq.tgf <- rna.seq[rownames(rna.seq)%in%tgf.all,] # expression data for all gene
-tgf.dist <- dist(t(rna.seq.tgf),method = "euclidean") # calculates a distance matrix sing euclidean distance
-tgf.clust <- hclust(tgf.dist,method="ward") # does clustering with the wards agglomerative method
-clust.assignments <- cutree(tgf.clust,k=4) # this will break them up into 4 clusters, when the maximum distance is used with ward clustering algorithm
-# simply to generate a column color bar on the top according to their cluster assignments
-clust.col <- gsub("1","red",clust.assignments)
-clust.col <- gsub("2","blue",clust.col)
-clust.col <- gsub("3","orange",clust.col)
-clust.col <- gsub("4","green",clust.col)
+
+rna.seq.ztransformed <- apply(log2(rna.seq+1),2,scale) # scales along the columns by sample
+rownames(rna.seq.ztransformed) <- rownames(rna.seq)
+colnames(rna.seq.ztransformed) <- colnames(rna.seq)
+rna.seq.z.tgf <- rna.seq.ztransformed[rownames(rna.seq.ztransformed)%in%tgf.all,] # gets all the TGFb response genes
+#rna.seq.z.tgf.in <- rna.seq.z.tgf[which(apply(rna.seq.tgf.fc,1,sd)> 3.253159),]
+rna.seq.tgf.means <- apply(rna.seq.z.tgf,1,mean) #finds the mean for each gene
+rna.seq.tgf.fc <- apply(rna.seq.z.tgf,2,function(x) x/rna.seq.tgf.means) # computes the log FC of the data
+# we only want to use the first 50 most variable response genes because they are most likely to be indicative of the subtypes; maximize the SD
+rna.seq.tgf.variable <- rna.seq.z.tgf[which(apply(rna.seq.tgf.fc,1,sd)> 3.253159),] #20 most variable genes
+tgf.dist.variable <- dist(t(rna.seq.tgf.variable),method = "euclidean") # calculates a distance matrix sing euclidean distance
+tgf.clust <- hclust(tgf.dist.variable,method="ward") # does clustering with the wards agglomerative method
+clust.assignments <- cutree(tgf.clust,k=2) # this will break them up into 2 clusters, when the maximum distance is used with ward clustering algorithm
+clusterassignments <- gsub(1,"blue",clust.assignments)
+clusterassignments <- gsub(2,"red",clusterassignments)
 
 require(gplots)
-heatmap.2(as.matrix(log10(rna.seq.tgf+1)),trace = "none",hclustfun = function(x) hclust(x,method = "ward"),distfun = function(x) dist(x,method = "euclidean"),col=topo.colors(100),ColSideColors = clust.col) # plot heatmap for all the genes of interest in the TGFb response
-
-# Perform bootstrapping to test structure and robustness of clustering
-require(ClassDiscovery)
-boot <- BootstrapClusterTest(log10(rna.seq.tgf+1),cutHclust,k=4,method="ward",metric="euclid",nTimes = 1000,verbose = FALSE) # uses 1000 iterations to perform bootstrapping of SAMPLE clustering
-image(boot,col=blueyellow(64),dendrogram=tgf.clust,ColSideColors=clust.col,RowSideColors=clust.col) # plots the counts
-
-
-grp1 <- rna.seq.tgf[,which(clust.col=="blue")] # blue cluster
-grp2 <- rna.seq.tgf[,which(clust.col!="blue")] # other clusters
-
-# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
-# the conflating of the other group might be a problem if we cannot show that the blue cluster is the better cluster
-# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
-
-bootstrapscores <- function(x,y,n.iters=1000){
-    # function to calculate score of suitability of grp 1 vs grp 2
-    # to guarantee reproducibility of results only #
-    set.seed(0)
-    seeds <- sample(1:100000,n.iters,replace=TRUE) # generates a list of random seeds
-    result.list <- rep(NA,n.iters)
-    for (i in 1:n.iters){
-    set.seed(seeds[i])
-     cat("iteration",i," with seed",seeds[i],"\n")
-    gl <- sample(1:372,372,replace=TRUE) # gets a list of genes by their rows
-    grp1.list <- x[gl,]
-    grp2.list <- y[gl,]
-    grp1.up <- x[rownames(grp1.list)%in%tgf.up,]
-    grp2.up <- y[rownames(grp2.list)%in%tgf.up,]
-    grp1.down <- x[rownames(grp1.list)%in%tgf.down,]
-    grp2.down <- y[rownames(grp2.list)%in%tgf.down,]
-    up.r <- rep(NA,nrow(grp1.up))
-    down.r <- rep(NA,nrow(grp1.down))
-    for (j in 1:nrow(grp1.up)){
-        z <- wilcox.test(as.numeric(grp1.up[j,]),as.numeric(grp2.up[j,]),alternative = "greater")
-        up.r[j] <- z$p.value
-    }
-    for (k in 1:nrow(grp1.down)){
-        z <- wilcox.test(as.numeric(grp1.down[k,]),as.numeric(grp2.down[k,]),alternative = "less")
-        down.r[k] <- z$p.value
-    }
-    b <- sum(up.r,down.r)
-    result.list[i] <- b
-    } # closes the for loop over the iterations
-   return(result.list/372)
-}
-bluescore <- bootstrapscores(grp1,grp2,1000) # bootstrap for the blue cluster
-# both runs will have the same set of seeds, which means both will have the same set of genes compared throughout the simulations - fair comparison but not sure how robust though #
-miscscore <- bootstrapscores(grp2,grp1,1000) # bootstrap for other clusters
-
-# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
-# high p-value = high likelihood of similarity between grp 1 and 2, mean less significant difference between the expression of the 2 groups -
-#we want to maximize the significance of difference in the a priori expected direction, hence want to minimize the sum of all the p-values
-# for instuitive interpretation take the complement of the p-value (1-p)
-# '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''' #
-
-bluecom <- 1-bluescore # to calculate the reverse for interpretability
-miscom <- 1-miscscore
-boxplot(data.frame(Blue=bluecom,Others=miscom)) # boxplot to visualize scores
+heatmap.2(rna.seq.tgf.variable,trace="none",hclustfun = function(x) hclust(x,method = "ward"),distfun = function(x) dist(x,method = "euclidean"),ColSideColors = clusterassignments) # plots a heatmap with the color bars on the top indicating the membership
+# NOT useful #
+# not run #
+#require(FactoMineR)
+#pcaresults <- PCA(t(rna.seq.tgf.variable),graph=TRUE)
+#pcaplotting <- pcaresults$ind$coord
+#write.table(pcaplotting,"pca.csv",sep="\t")# performs PCA and stores for PC 1 to PC 5 only to be exported; then after some mild parsing, use Adelene's Plot_PCA codes to plot the PCA contour map (saved as PCAplot.png)
+# NOT useful #
 
 
+# CODE CHUNK 4: constructing a representative profile
 
-
-
+# Using medians of z-transformed counts
+rna.seq.blue <- rna.seq.ztransformed[,which(clusterassignments=="blue")] #gets all the genes for samples in the blue cluster
+rna.seq.z.profile <- apply(rna.seq.blue,1,median) # this is the profile based on the median
 
 
