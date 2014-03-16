@@ -109,9 +109,99 @@ heatmap.2(rna.seq.tgf.variable,trace="none",hclustfun = function(x) hclust(x,met
 
 
 # CODE CHUNK 4: constructing a representative profile
-
 # Using medians of z-transformed counts
 rna.seq.blue <- rna.seq.ztransformed[,which(clusterassignments=="blue")] #gets all the genes for samples in the blue cluster
 rna.seq.z.profile <- apply(rna.seq.blue,1,median) # this is the profile based on the median
+rna.seq.z.profile <- data.frame(Name=rownames(rna.seq),Reads=rna.seq.z.profile)
+rownames(rna.seq.z.profile) <- rna.seq.z.profile$Name
+# CODE CHUNK 5: Read in CCLE gene expression data
+ccle.expression <- read.table("CCLE_gene_expression_awk.txt",sep="\t",header = TRUE)
+# ID the cell lines that are listed as being BREAST
+brca.cell.lines <- ccle.expression[,grep("BREAST",colnames(ccle.expression))]
+brca.cell.lines$Description <- ccle.expression$Description
+others.cell.lines <- ccle.expression[,-grep("BREAST",colnames(ccle.expression))]
+others.cell.lines$Description <- ccle.expression$Description
 
+# CODE CHUNK 6: Comparing the CCLE and TCGA data using the spearman correlation coefficient
+rna.seq.present <- rownames(rna.seq.z.profile)[rownames(rna.seq.z.profile)%in%ccle.expression$Description]
+rna.seq.z.profile.ccle <- rna.seq.z.profile[rownames(rna.seq.z.profile)%in%ccle.expression$Description,]# ID the genes that are common to both platforms first
+ccle.breast.expression <- brca.cell.lines[brca.cell.lines$Description%in%rna.seq.present,]
+others.cell.lines.expression <- others.cell.lines[others.cell.lines$Description%in%rna.seq.present,]
+others.cell.lines <- others.cell.lines[-14027]
+ccle.breast.expression <- ccle.breast.expression[-14027,] # removes the second instance of TTL
+others.correlation.matrix <- merge(rna.seq.z.profile.ccle,others.cell.lines.expression,by.x="Name",by.y="Description") # merges them together in a single frame for other samples
+others.correlation.matrix <- others.correlation.matrix[,-3]
+others.correlations <- apply(log2(others.correlation.matrix[,3:ncol(others.correlation.matrix)]),2,function(x) cor(x,y=others.correlation.matrix$Reads,method = "spearman"))
+correlation.matrix <- merge(rna.seq.z.profile.ccle,ccle.breast.expression,by.x="Name",by.y="Description") # merges them together in a single frame
+correlations <- apply(log2(correlation.matrix[,3:ncol(correlation.matrix)]),2,function(x) cor(x,y=correlation.matrix$Reads,method="spearman")) # returns a list of correlations
+all.corrs <- c(correlations,others.correlations)
 
+# CODE CHUNK 7: plotting boxplot of correlation coefficients with ggplot
+require(ggplot2)
+x <- data.frame(Type=c(rep("Breast",59),rep("Non-breast",length(others.correlations))),Corr=all.corrs)# create a dataframe for plotting
+ggplot(data=x,aes(x=factor(Type),y=Corr))+geom_boxplot()+xlab("Cell line type")+ylab("Correlation coefficient")+ggtitle("Correlation coefficients of groups")  # boxplot with ggplot
+ggsave(file="~/Desktop/tcga_bioinformatics/presentations/images/correlations.png")
+# get the SCGB1D2 expression
+# CCLE
+brca.ccle.expression.scgb <- brca.cell.lines[brca.cell.lines$Description=="SCGB1D2",]
+brca.ccle.expression.scgb <- brca.ccle.expression.scgb[-60]
+others.ccle.expression.scgb <- others.cell.lines.expression[others.cell.lines$Description=="SCGB1D2",]
+others.ccle.expression.scgb <- others.ccle.expression.scgb[-c(1:2)]
+x$Expression <- as.numeric(c(brca.ccle.expression.scgb,others.ccle.expression.scgb))
+ggplot(data=x,aes(x=factor(Type),y=Expression))+geom_boxplot()+xlab("Cell line type")+ylab("Expression of SCGB1D2")+ggtitle("SCGB1D2 expression of groups (CCLE)")  # boxplot with ggplot
+ggsave(file="~/Desktop/tcga_bioinformatics/presentations/images/scgb1d2expression.png")
+# TCGA
+rna.seq.red <- rna.seq[,which(clusterassignments=="red")]
+rna.seq.blue <- rna.seq[,which(clusterassignments=="blue")]
+rna.seq.blue.scgb <- log2(rna.seq.blue[rownames(rna.seq.blue)=="SCGB1D2",]+1)
+rna.seq.red.scgb <- log2(rna.seq.red[rownames(rna.seq.blue)=="SCGB1D2",]+1)
+cluster.status <- c(rep("Blue",ncol(rna.seq.blue)),rep("Red",ncol(rna.seq.red)))
+u <- data.frame(Cluster=cluster.status,RNAseq=c(unlist(as.list(rna.seq.blue.scgb)),unlist(as.list(rna.seq.red.scgb))))
+v <- melt(u)
+ggplot(v,aes(x=Cluster,y=value))+geom_boxplot()+ggtitle("log2 RNASeq reads for each cluster")+ylab("log2 RNASeq reads")
+ggsave(file="~/Desktop/tcga_bioinformatics/presentations/images/rnaseqscgb1d2.png")
+rm(u,v)
+
+#CODE CHUNK 8: Getting the sample IDs in the group, and their associated CNV files
+samples.in.group <- colnames(rna.seq.blue)
+samples.in.group <- gsub("[.]","-",samples.in.group)  # converts it into a gsub call
+manifest.files.group <- full.manifest[full.manifest$Sample%in%samples.in.group,] # gets the full list of files for samples in the group
+manifest.files.CNV <- manifest.files.group[manifest.files.group$Platform.Type=="CNV (SNP Array)",]
+manifest.files.CNV <- manifest.files.CNV[grep("[0-9].hg19.seg.txt",manifest.files.CNV$File.Name),] #keep only the HG19 files
+
+data(geneInfo)
+ccle.cnv <- read.table("/Volumes/HDD1/tcga/Datasets/CCLE_data/CNV_by_gene.txt",header = TRUE) # read in CCLE dataset
+ccle.genes <- ccle.cnv$geneName # get the gene names
+ccle.genes.info <- geneInfo[geneInfo$genename%in%ccle.genes,] # create a new gene info list for performing the reduce set
+require(CNTools)
+require(GenomicRanges)
+tcga.files <- as.vector(manifest.files.CNV$File.Name)
+# set a seed first, then we incrementally add the tables to generate a huge table for performing a reduce set object with CN tools
+
+for (j in 2:length(tcga.files)){
+    cat("Adding",tcga.files[j],"to list\n")
+    f <- read.table(tcga.files[j],header=TRUE)
+    tcga.cnv <- rbind(tcga.cnv,f)
+    }
+tcga.seg <- CNSeg(tcga.cnv,id="Sample",chromosome = "Chromosome",start = "Start",end="End",segMean="Segment_Mean")
+tcga.reduced <- getRS(tcga.seg, by="gene",imput = FALSE, XY=FALSE,geneMap = geneInfo,what = "median")
+tcga.reduced.matrix <- rs(tcga.reduced) # gets the matrix of values
+ tcga.cnv.ccle <- tcga.reduced.matrix[tcga.reduced.matrix$genename%in%ccle.genes,] # gets only the genes also in CCLE
+ccle.cnv.tcga <- ccle.cnv[ccle.cnv$geneName%in%tcga.cnv.ccle$genename,] # overlaps both
+tcga.cnv.ccle <- tcga.cnv.ccle[-6979,] # removes a PRG2 which is in a difference chromosome (chr 19)
+rownames(tcga.cnv.ccle) <- tcga.cnv.ccle$gene
+rownames(ccle.cnv.tcga) <- ccle.cnv.tcga$geneName
+tcga.cnv.ccle <- tcga.cnv.ccle[,-c(1:4)]
+# to construct a CNV profile for tcga data
+tcga.cnv.profile <- apply(tcga.cnv.ccle[,2:ncol(tcga.cnv.ccle)],1,median)
+tcga.cnv.profile <- data.frame(genename=tcga.cnv.ccle$genename,median=tcga.cnv.profile)
+ccle.cnv.tcga <- ccle.cnv.tcga[-c(2:4)]
+tcga.ccle.merged.cnv <- merge(tcga.cnv.profile,ccle.cnv.tcga,by.x="genename",by.y="geneName") # merges everything so that we can simply do an apply to compute correlation
+rownames(tcga.ccle.merged.cnv) <- tcga.ccle.merged.cnv$genename
+tcga.ccle.merged.cnv <- tcga.ccle.merged.cnv[,-1]
+correlations.cnv <- apply(tcga.ccle.merged.cnv[,2:ncol(tcga.ccle.merged.cnv)],2,function(x){cor(tcga.ccle.merged.cnv$median,x,method="pearson")}) #computes the correlation using the pearson correlation method
+correlationsbreast <- correlations.cnv[grep("BREAST",colnames(tcga.ccle.merged.cnv)[2:ncol(tcga.ccle.merged.cnv)])]
+correlationsothers <- correlations.cnv[-grep("BREAST",colnames(tcga.ccle.merged.cnv)[2:ncol(tcga.ccle.merged.cnv)])]
+cnvcorrelations.plot <- data.frame(Type=c(rep("Breast",length(correlationsbreast)),rep("Non-Breast",length(correlationsothers))),Cor=c(correlationsbreast,correlationsothers))
+ggplot(cnvcorrelations.plot,aes(x=factor(Type),y=Cor))+geom_boxplot()+xlab("Origin")+ylab("Correlation coefficient")+ggtitle("Correlation of CNV profile")
+ggsave(file="~/Desktop/tcga_bioinformatics/presentations/images/CNVcorrelations.png")
