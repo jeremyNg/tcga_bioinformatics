@@ -193,7 +193,7 @@ rownames(tcga.cnv.ccle) <- tcga.cnv.ccle$gene
 rownames(ccle.cnv.tcga) <- ccle.cnv.tcga$geneName
 tcga.cnv.ccle <- tcga.cnv.ccle[,-c(1:4)]
 # to construct a CNV profile for tcga data
-tcga.cnv.profile <- apply(tcga.cnv.ccle[,2:ncol(tcga.cnv.ccle)],1,median)
+tcga.cnv.profile <- apply(tcga.cnv.ccle[,2:ncol(tcga.cnv.ccle)],1,mean)
 tcga.cnv.profile <- data.frame(genename=tcga.cnv.ccle$genename,median=tcga.cnv.profile)
 ccle.cnv.tcga <- ccle.cnv.tcga[-c(2:4)]
 tcga.ccle.merged.cnv <- merge(tcga.cnv.profile,ccle.cnv.tcga,by.x="genename",by.y="geneName") # merges everything so that we can simply do an apply to compute correlation
@@ -205,3 +205,5 @@ correlationsothers <- correlations.cnv[-grep("BREAST",colnames(tcga.ccle.merged.
 cnvcorrelations.plot <- data.frame(Type=c(rep("Breast",length(correlationsbreast)),rep("Non-Breast",length(correlationsothers))),Cor=c(correlationsbreast,correlationsothers))
 ggplot(cnvcorrelations.plot,aes(x=factor(Type),y=Cor))+geom_boxplot()+xlab("Origin")+ylab("Correlation coefficient")+ggtitle("Correlation of CNV profile")
 ggsave(file="~/Desktop/tcga_bioinformatics/presentations/images/CNVcorrelations.png")
+
+# note: Code chunk for running CNV landscape was not included, but can be built from the workspace object that is loaded via load("workspace.Rdata")
