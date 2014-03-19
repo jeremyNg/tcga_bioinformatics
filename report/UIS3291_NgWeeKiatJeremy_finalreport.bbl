@@ -1,0 +1,147 @@
+\begin{thebibliography}{10}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\providecommand{\bibinfo}[2]{#2}
+\providecommand{\eprint}[2][]{\url{#2}}
+
+\bibitem{Rouzier2005}
+\bibinfo{author}{Rouzier, R.} \emph{et~al.}
+\newblock \bibinfo{title}{{Breast cancer molecular subtypes respond differently
+  to preoperative chemotherapy.}}
+\newblock \emph{\bibinfo{journal}{Clinical cancer research}}
+  \textbf{\bibinfo{volume}{11}}, \bibinfo{pages}{5678--85}
+  (\bibinfo{year}{2005}).
+
+\bibitem{knabbe1987}
+\bibinfo{author}{Knabbe, C.} \emph{et~al.}
+\newblock \bibinfo{title}{{Evidence that transforming growth factor-$\beta$ is
+  a hormonally regulated negative growth factor in human breast cancer cells}}.
+\newblock \emph{\bibinfo{journal}{Cell}} \textbf{\bibinfo{volume}{48}},
+  \bibinfo{pages}{417--428} (\bibinfo{year}{1987}).
+
+\bibitem{yang2010}
+\bibinfo{author}{Yang, G.} \& \bibinfo{author}{Yang, X.}
+\newblock \bibinfo{title}{{Smad4-mediated TGF-beta signaling in
+  tumorigenesis.}}
+\newblock \emph{\bibinfo{journal}{International journal of biological
+  sciences}} \textbf{\bibinfo{volume}{6}}, \bibinfo{pages}{1--8}
+  (\bibinfo{year}{2010}).
+
+\bibitem{McEarchern2001}
+\bibinfo{author}{McEarchern, J.~a.} \emph{et~al.}
+\newblock \bibinfo{title}{{Invasion and metastasis of a mammary tumor involves
+  TGF-beta signaling.}}
+\newblock \emph{\bibinfo{journal}{International journal of cancer}}
+  \textbf{\bibinfo{volume}{91}}, \bibinfo{pages}{76--82}
+  (\bibinfo{year}{2001}).
+
+\bibitem{Bierie2006}
+\bibinfo{author}{Bierie, B.} \& \bibinfo{author}{Moses, H.~L.}
+\newblock \bibinfo{title}{{Tumour microenvironment: TGFbeta: the molecular
+  Jekyll and Hyde of cancer.}}
+\newblock \emph{\bibinfo{journal}{Nature reviews. Cancer}}
+  \textbf{\bibinfo{volume}{6}}, \bibinfo{pages}{506--20}
+  (\bibinfo{year}{2006}).
+
+\bibitem{Zhang2009}
+\bibinfo{author}{Zhang, Y.~E.}
+\newblock \bibinfo{title}{{Non-Smad pathways in TGF-beta signaling.}}
+\newblock \emph{\bibinfo{journal}{Cell research}}
+  \textbf{\bibinfo{volume}{19}}, \bibinfo{pages}{128--39}
+  (\bibinfo{year}{2009}).
+
+\bibitem{Yamori2003}
+\bibinfo{author}{Yamori, T.}
+\newblock \bibinfo{title}{{Panel of human cancer cell lines provides valuable
+  database for drug discovery and bioinformatics.}}
+\newblock \emph{\bibinfo{journal}{Cancer chemotherapy and pharmacology}}
+  \textbf{\bibinfo{volume}{52 Suppl 1}}, \bibinfo{pages}{S74--9}
+  (\bibinfo{year}{2003}).
+
+\bibitem{Gillet2013}
+\bibinfo{author}{Gillet, J.-P.}, \bibinfo{author}{Varma, S.} \&
+  \bibinfo{author}{Gottesman, M.~M.}
+\newblock \bibinfo{title}{{The clinical relevance of cancer cell lines.}}
+\newblock \emph{\bibinfo{journal}{Journal of the National Cancer Institute}}
+  \textbf{\bibinfo{volume}{105}}, \bibinfo{pages}{452--8}
+  (\bibinfo{year}{2013}).
+
+\bibitem{Domcke2013}
+\bibinfo{author}{Domcke, S.}, \bibinfo{author}{Sinha, R.} \&
+  \bibinfo{author}{Levine, D.}
+\newblock \bibinfo{title}{{Evaluating cell lines as tumour models by comparison
+  of genomic profiles}}.
+\newblock \emph{\bibinfo{journal}{Nature}} \textbf{\bibinfo{volume}{4}}
+  (\bibinfo{year}{2013}).
+
+\bibitem{sandberg2005}
+\bibinfo{author}{Sandberg, R.} \& \bibinfo{author}{Ernberg, I.}
+\newblock \bibinfo{title}{{Assessment of tumor characteristic gene expression
+  in cell lines using a tissue similarity index (TSI).}}
+\newblock \emph{\bibinfo{journal}{Proceedings of the National Academy of
+  Sciences of the United States of America}} \textbf{\bibinfo{volume}{102}},
+  \bibinfo{pages}{2052--7} (\bibinfo{year}{2005}).
+
+\bibitem{Veer2002}
+\bibinfo{author}{Veer, L. J.~V.} \emph{et~al.}
+\newblock \bibinfo{title}{{Gene expression profiling predicts clinical outcome
+  of breast cancer}}.
+\newblock \emph{\bibinfo{journal}{Nature}} \textbf{\bibinfo{volume}{415}},
+  \bibinfo{pages}{530--535} (\bibinfo{year}{2002}).
+
+\bibitem{Finetti2004}
+\bibinfo{author}{Finetti, P.} \emph{et~al.}
+\newblock \bibinfo{title}{{Gene Expression Profiling for Molecular
+  Characterization of Inflammatory Breast Franc}}.
+\newblock \emph{\bibinfo{journal}{Cancer Research}}
+  \textbf{\bibinfo{volume}{1}}, \bibinfo{pages}{8558--8565}
+  (\bibinfo{year}{2004}).
+
+\bibitem{Finetti2005}
+\bibinfo{author}{Finetti, P.} \emph{et~al.}
+\newblock \bibinfo{title}{{Gene Expression Profiling Identifies Molecular
+  Subtypes of Inflammatory Breast Cancer Franc}}.
+\newblock \emph{\bibinfo{journal}{Cancer Research}}
+  \textbf{\bibinfo{volume}{65}}, \bibinfo{pages}{2170--2178}
+  (\bibinfo{year}{2005}).
+
+\bibitem{Zafrakas2006}
+\bibinfo{author}{Zafrakas, M.} \emph{et~al.}
+\newblock \bibinfo{title}{{Expression analysis of mammaglobin A (SCGB2A2) and
+  lipophilin B (SCGB1D2) in more than 300 human tumors and matching normal
+  tissues reveals their co-expression in gynecologic malignancies.}}
+\newblock \emph{\bibinfo{journal}{BMC cancer}} \textbf{\bibinfo{volume}{6}}
+  (\bibinfo{year}{2006}).
+
+\bibitem{Guo2013}
+\bibinfo{author}{Guo, Y.} \emph{et~al.}
+\newblock \bibinfo{title}{{Large scale comparison of gene expression levels by
+  microarrays and RNAseq using TCGA data.}}
+\newblock \emph{\bibinfo{journal}{PloS one}} \textbf{\bibinfo{volume}{8}},
+  \bibinfo{pages}{e71462} (\bibinfo{year}{2013}).
+
+\bibitem{Pharoah1999}
+\bibinfo{author}{Pharoah, P.~D.}, \bibinfo{author}{Day, N.~E.} \&
+  \bibinfo{author}{Caldas, C.}
+\newblock \bibinfo{title}{{Somatic mutations in the p53 gene and prognosis in
+  breast cancer: a meta-analysis.}}
+\newblock \emph{\bibinfo{journal}{British journal of cancer}}
+  \textbf{\bibinfo{volume}{80}}, \bibinfo{pages}{1968--73}
+  (\bibinfo{year}{1999}).
+
+\bibitem{Cizkova2012}
+\bibinfo{author}{Cizkova, M.} \emph{et~al.}
+\newblock \bibinfo{title}{{PIK3CA mutation impact on survival in breast cancer
+  patients and in ER$\alpha$, PR and ERBB2-based subgroups.}}
+\newblock \emph{\bibinfo{journal}{Breast cancer research : BCR}}
+  \textbf{\bibinfo{volume}{14}}, \bibinfo{pages}{R28} (\bibinfo{year}{2012}).
+
+\bibitem{Greenman2009}
+\bibinfo{author}{Greenman, C.} \emph{et~al.}
+\newblock \bibinfo{title}{{Europe PMC Funders Group Patterns of somatic
+  mutation in human cancer genomes}}.
+\newblock \emph{\bibinfo{journal}{Nature}} \textbf{\bibinfo{volume}{446}},
+  \bibinfo{pages}{153--158} (\bibinfo{year}{2009}).
+
+\end{thebibliography}
