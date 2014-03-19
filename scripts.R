@@ -1,4 +1,5 @@
 # CODE CHUNK 1: Making the required manifest files to read files etc;
+# require(multicore) # for parallelizations
 
 gen.manifest <- function(){
 manifest1 <- read.table("batch1_manifest.txt",sep="\t",header=T)
@@ -207,3 +208,104 @@ ggplot(cnvcorrelations.plot,aes(x=factor(Type),y=Cor))+geom_boxplot()+xlab("Orig
 ggsave(file="~/Desktop/tcga_bioinformatics/presentations/images/CNVcorrelations.png")
 
 # note: Code chunk for running CNV landscape was not included, but can be built from the workspace object that is loaded via load("workspace.Rdata")
+
+# CODE CHUNK 9: Working with somatic mutations
+# using level 2 MAF (uncurated data)
+
+require(multicore) # for mclapply call in the calculation of priors to speed up computation
+getMAF <- function(){
+    x <- read.table("batch1.maf",sep="\t",header=TRUE)
+    y <- read.table("batch2.maf",sep="\t",header=TRUE)
+    z <- read.table("batch3.maf",sep="\t",header=TRUE)
+    mafs <- rbind(x,y,z)
+    mafs
+    }
+allMAFs <- getMAF()
+rm(getMAF)
+allMAFs <- allMAFs[with(allMAFs,order(Chrom)),] # orders the chromosome number
+allMAFs$detailed <- paste0(allMAFs$Hugo_Symbol,"-",allMAFs$Variant_Classification)
+calPy <- function(x){
+    # get the genes
+    genes <- as.vector(unique(allMAFs$detailed))
+    cat("Priors for",length(genes),"genes will be estimated\n")
+    # perform the summarizations
+    n <- 935 # this is the number of samples
+    # define subroutine to get mutations by the genes
+    getM <- function(gene){
+        #cat("Estimating prior for ",gene,"\n")
+        w <- x[x$detailed==gene,]
+        s <- length(unique(gsub("01A-$","01A",w$Tumor_Sample_Barcode))) # extracts the no of unique samples with the mutation
+        s
+        }
+    counts <- mclapply(genes,getM,mc.cores = 4)
+    py <- unlist(counts)/n
+    res <- data.frame(Gene=genes,PriorFreq=py)
+    return(res)
+    }
+# to calculate p(y|x)
+# getMAF for only those in the cluster
+getMAF <- function(){
+    #llMAFs$Tumor_Sample_Barcode <- gsub("01[A-B]-.*$","01",allMAFs$Tumor_Sample_Barcode)
+    # perform a match
+    x <- allMAFs[allMAFs$Tumor_Sample_Barcode%in%samples.in.group,]# this is a DF of only those in the cluster
+    n <- length(unique(x$Tumor_Sample_Barcode)) # this is the n
+    getM <- function(gene){
+        w <- x[x$detailed==gene,]
+        s <- length(unique(gsub("01A-$","01A",w$Tumor_Sample_Barcode))) # extracts the no of unique samples with the mutation
+        s
+        } # defines subroutine
+    genes <- as.vector(unique(x$detailed)) # gets the gene list
+    cat("Calculating prior for ",length(genes),"genes \n")
+    count <- mclapply(genes,getM,mc.cores = 4)
+    pyx <- unlist(count)/n # this is p(y|x)
+    res <- data.frame(Gene=genes,Prior=pyx) # returns a dataframe
+    res
+    }
+
+# THESE ARE THE PARAMETERS FOR COMPUTATION OF CONDITIONAL PROBABILITY #
+pYX <- getMAF() # gets the P(Y|X) for the genes //
+pY <- 568/936 # this is the probability of being TGFb sensitive
+priors <- calPy(allMAFs) # this is a table of priors for all gene-mutation type combination # p(x)
+#######################################################################
+cclemaf <- read.table("CCLE_Oncomap3.maf",sep="\t",header=TRUE)
+calculatePOST <- function(cellline){
+    cat("Computing for cell line",cellline,"\n")
+    cclemaf2 <- cclemaf[cclemaf$Tumor_Sample_Barcode==cellline,]
+    mtype <- unique(cclemaf2$detailed)  # this specifies the mutationtype
+    #print(mtype)
+    x <- priors[priors$Gene%in%mtype,] # gets all the probabilities px -> probability of mutation occuring
+    #print(x)
+    if(nrow(x)==0){
+        px <- 0
+        } else
+            {px <- prod(x$PriorFreq)}
+    yx <- pYX[pYX$Gene%in%mtype,] # gets pY|X -> prob of mutation occuring given its a mutant
+
+    if(nrow(yx)==0){
+        pyx <- 0
+        } else
+            {  pyx <- prod(yx$Prior)
+  }
+
+    #print(pyx)
+    py <- pY
+    #print(py)
+    post <- pyx*px/py
+    cat("P(Y|X)=",pyx,",PX=",px,"Score=",post,"\n")
+    return(post) #returns the posterior distribution
+    }
+cclemaf$detailed <- paste0(cclemaf$Hugo_Symbol,"-",cclemaf$Variant_Classification)
+cls <- as.vector(unique(cclemaf$Tumor_Sample_Barcode))
+mutationscores
+mutationscores <- mclapply(cls,calculatePOST,mc.cores=4)
+# These are the scoring components
+correlations.cnv <- as.data.frame(correlations.csv)# object that stores CNV correlations for all the cell lines # already in workspace
+correlations.cnv$CL <- rownames(correlations.cnv)
+all.corrs <- as.data.frame(all.corrs) # this is the
+all.corrs$CL <- rownames(all.corrs)
+mutationscores <- data.frame(CL=cls,MScores=unlist(mutationscores))
+scoringmatrix <- merge(correlations.cnv,all.corrs,"CL","CL")
+scoringmatrix <- merge(scoringmatrix,mutationscores,"CL","CL")
+scoringmatrix$TotalScore <- apply(scoringmatrix[,2:4],1,function(x)sum(x)+2)
+# Code Chunk 10: Selection of cell lines and representing them
+# probably more visualizations
