@@ -296,10 +296,9 @@ calculatePOST <- function(cellline){
     }
 cclemaf$detailed <- paste0(cclemaf$Hugo_Symbol,"-",cclemaf$Variant_Classification)
 cls <- as.vector(unique(cclemaf$Tumor_Sample_Barcode))
-mutationscores
 mutationscores <- mclapply(cls,calculatePOST,mc.cores=4)
 # These are the scoring components
-correlations.cnv <- as.data.frame(correlations.csv)# object that stores CNV correlations for all the cell lines # already in workspace
+correlations.cnv <- as.data.frame(correlations.cnv)# object that stores CNV correlations for all the cell lines # already in workspace
 correlations.cnv$CL <- rownames(correlations.cnv)
 all.corrs <- as.data.frame(all.corrs) # this is the
 all.corrs$CL <- rownames(all.corrs)
