@@ -90,7 +90,7 @@ rna.seq.z.tgf <- rna.seq.ztransformed[rownames(rna.seq.ztransformed)%in%tgf.all,
 #rna.seq.z.tgf.in <- rna.seq.z.tgf[which(apply(rna.seq.tgf.fc,1,sd)> 3.253159),]
 rna.seq.tgf.means <- apply(rna.seq.z.tgf,1,mean) #finds the mean for each gene
 rna.seq.tgf.fc <- apply(rna.seq.z.tgf,2,function(x) x/rna.seq.tgf.means) # computes the log FC of the data
-# we only want to use the first 50 most variable response genes because they are most likely to be indicative of the subtypes; maximize the SD
+# we only want to use the first 20 most variable response genes because they are most likely to be indicative of the subtypes; maximize the SD
 rna.seq.tgf.variable <- rna.seq.z.tgf[which(apply(rna.seq.tgf.fc,1,sd)> 3.253159),] #20 most variable genes
 tgf.dist.variable <- dist(t(rna.seq.tgf.variable),method = "euclidean") # calculates a distance matrix sing euclidean distance
 tgf.clust <- hclust(tgf.dist.variable,method="ward") # does clustering with the wards agglomerative method
@@ -270,6 +270,7 @@ priors <- calPy(allMAFs) # this is a table of priors for all gene-mutation type 
 cclemaf <- read.table("CCLE_Oncomap3.maf",sep="\t",header=TRUE)
 calculatePOST <- function(cellline){
     cat("Computing for cell line",cellline,"\n")
+    cclemaf <- naf
     cclemaf2 <- cclemaf[cclemaf$Tumor_Sample_Barcode==cellline,]
     mtype <- unique(cclemaf2$detailed)  # this specifies the mutationtype
     #print(mtype)
@@ -291,7 +292,7 @@ calculatePOST <- function(cellline){
     py <- pY
     #print(py)
     post <- pyx*px/py
-    cat("P(Y|X)=",pyx,",PX=",px,"Score=",post,"\n")
+    cat("No of muations=",nrow(x),"P(Y|X)=",pyx,",PX=",px,"Score=",post,"\n")
     return(post) #returns the posterior distribution
     }
 cclemaf$detailed <- paste0(cclemaf$Hugo_Symbol,"-",cclemaf$Variant_Classification)
