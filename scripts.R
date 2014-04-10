@@ -308,7 +308,7 @@ getMC <- function(x){
 estimate.mutations <- mclapply(cell.lines.breast,calculatebytrials,mc.cores = 4)
 mutations.count <- mclapply(cell.lines.breast,getMC,mc.cores=4)
 mutation <- data.frame(CellLine=cell.lines.breast,Esimated.Mutations=unlist(estimate.mutations),No.mutations=unlist(mutations.count))
-P.Score <- dpois(m$No.mutations,m$Esimated.Mutations) # we model the number of mutations as a poisson distribution
+P.Score <- ppois(mutation$No.mutations,mutation$Esimated.Mutations,lower.tail = FALSE) # we model the number of mutations as a poisson distribution
 mutation$P.Score <- P.Score
 rm(calculatebytrials,getMC)
 
